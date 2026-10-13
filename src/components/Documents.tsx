@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { Check, FileDown, FileText } from "lucide-react";
 import { AIME_ID, TYPES_DOCUMENTS } from "../data/espace";
-import { TOUS_LES_EVENEMENTS, UNIVERS_PAR_ID } from "../data/annee";
+import { UNIVERS_PAR_ID } from "../data/annee";
+import { getTousLesEvenements, useEspaceStore } from "../hooks/useEspaceStore";
 
 function buildDocument(type: string, nom: string, eventId: string): string {
-  const item = TOUS_LES_EVENEMENTS.find((x) => x.event.id === eventId) ?? TOUS_LES_EVENEMENTS[0];
+  const tous = getTousLesEvenements();
+  const item = tous.find((x) => x.event.id === eventId) ?? tous[0];
   const { event, mois } = item;
-  const univers = UNIVERS_PAR_ID[event.univers];
+  const univers = UNIVERS_PAR_ID[event.univers] ?? Object.values(UNIVERS_PAR_ID)[0];
   const date = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
   const corps: Record<string, { titre: string; lignes: string[] }> = {
@@ -80,13 +82,16 @@ ${doc.lignes.map((l) => `<p>${l}</p>`).join("\n")}
 }
 
 export default function Documents() {
+  const { tousLesEvenements, propositions } = useEspaceStore();
   const [nom, setNom] = useState("Camille Ravier");
-  const [eventId, setEventId] = useState(TOUS_LES_EVENEMENTS[6].event.id);
+  const [eventId, setEventId] = useState(
+    () => propositions[0]?.event.id ?? tousLesEvenements[6]?.event.id ?? "07",
+  );
   const [genere, setGenere] = useState<string | null>(null);
 
   const item = useMemo(
-    () => TOUS_LES_EVENEMENTS.find((x) => x.event.id === eventId) ?? TOUS_LES_EVENEMENTS[0],
-    [eventId],
+    () => tousLesEvenements.find((x) => x.event.id === eventId) ?? tousLesEvenements[0],
+    [eventId, tousLesEvenements],
   );
 
   const telecharger = (typeId: string) => {
@@ -120,8 +125,10 @@ export default function Documents() {
             onChange={(e) => setEventId(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/12 bg-[#0b0b0d] px-4 py-3 text-sm text-white focus:border-white/40 focus:outline-none"
           >
-            {TOUS_LES_EVENEMENTS.map(({ event: e, mois: m }) => (
-              <option key={e.id} value={e.id}>{m.nom} — {e.nom}</option>
+            {tousLesEvenements.map(({ event: e, mois: m, communaute }) => (
+              <option key={e.id} value={e.id}>
+                {m.nom} — {e.nom}{communaute ? " (Votre proposition)" : ""}
+              </option>
             ))}
           </select>
         </label>
@@ -130,22 +137,28 @@ export default function Documents() {
         </p>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {TYPES_DOCUMENTS.map((d) => (
-          <article key={d.id} className="flex flex-col rounded-2xl border border-white/10 bg-[#09090b] p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/25">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06]">
-              <FileText className="h-[18px] w-[18px]" />
-            </span>
-            <h3 className="mt-4 font-display text-[15px] font-bold tracking-tight">{d.titre}</h3>
-            <p className="mt-1.5 flex-1 text-[12.5px] leading-relaxed text-white/50">{d.description}</p>
+          <article key={d.id} className="apple-card flex flex-col justify-between rounded-2xl p-5">
+            <div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
+                <FileText className="h-4 w-4" />
+              </span>
+              <h3 className="mt-3.5 font-display text-[14.5px] font-bold tracking-tight text-white">
+                {d.titre}
+              </h3>
+              <p className="mt-1 text-[12px] leading-relaxed text-white/50">{d.description}</p>
+            </div>
             <button
               onClick={() => telecharger(d.id)}
-              className={`mt-4 inline-flex items-center justify-center gap-2 rounded-full py-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.13em] transition active:scale-[0.98] ${
-                genere === d.id ? "bg-emerald-400 text-black" : "bg-white text-black hover:bg-event-gradient hover:text-white"
+              className={`mt-4 inline-flex items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold transition ${
+                genere === d.id
+                  ? "bg-white text-black"
+                  : "border border-white/15 bg-white/[0.06] text-white hover:bg-white hover:text-black"
               }`}
             >
               {genere === d.id ? <Check className="h-3.5 w-3.5" /> : <FileDown className="h-3.5 w-3.5" />}
-              {genere === d.id ? "Document généré" : "Générer"}
+              {genere === d.id ? "Généré" : "Télécharger"}
             </button>
           </article>
         ))}

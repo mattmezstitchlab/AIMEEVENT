@@ -1,126 +1,249 @@
-import { useMemo, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowUpDown, Volume2, X } from "lucide-react";
+import { PROFILS, UNIVERS_PAR_ID, type PublicId, type RendezVous } from "../data/annee";
+import { sensorielDe } from "../data/innovations";
 import { Reveal } from "./Reveal";
-import { CALENDRIER, PROFILS, UNIVERS_PAR_ID, type PublicId } from "../data/annee";
+import TicketBlanc from "./TicketBlanc";
+import { useEspaceStore } from "../hooks/useEspaceStore";
 
 export default function ProgrammeAnnuel({
-  onOpenMonth,
-  onAcces,
+  onReserve,
+  moisFiltre = "tous",
+  onChangeMoisFiltre,
+  publicFiltre = "tous",
+  onChangePublicFiltre,
+  gratuitUniquement = false,
+  onToggleGratuit,
+  calmeUniquement = false,
+  onToggleCalme,
+  ordreDate = "asc",
+  onToggleOrdreDate,
 }: {
-  onOpenMonth: (monthId: string) => void;
-  onAcces: () => void;
+  onOpenMonth?: (id: string) => void;
+  onAcces?: () => void;
+  onReserve: (e: RendezVous) => void;
+  moisFiltre?: string;
+  onChangeMoisFiltre?: (m: string) => void;
+  publicFiltre?: PublicId | "tous";
+  onChangePublicFiltre?: (p: PublicId | "tous") => void;
+  gratuitUniquement?: boolean;
+  onToggleGratuit?: () => void;
+  calmeUniquement?: boolean;
+  onToggleCalme?: () => void;
+  ordreDate?: "asc" | "desc";
+  onToggleOrdreDate?: () => void;
 }) {
-  const [profil, setProfil] = useState<PublicId | null>(null);
+  const { calendrierComplet } = useEspaceStore();
 
-  const moisFiltres = useMemo(
-    () =>
-      CALENDRIER.map((mois) => ({
-        ...mois,
-        rendezVousVisibles: profil
-          ? mois.rendezVous.filter((r) => r.publics.includes(profil))
-          : mois.rendezVous,
-      })),
-    [profil],
-  );
+  const filtresActifs =
+    moisFiltre !== "tous" ||
+    publicFiltre !== "tous" ||
+    gratuitUniquement ||
+    calmeUniquement;
+
+  // Aplatit tous les événements (1 ticket unique par événement) et les trie par date
+  const evenementsTries = useMemo(() => {
+    const liste: {
+      event: RendezVous;
+      moisId: string;
+      moisNom: string;
+      moisIndex: number;
+      ordreGlobal: number;
+    }[] = [];
+
+    let compteur = 0;
+    calendrierComplet.forEach((m, mIdx) => {
+      if (moisFiltre !== "tous" && m.id !== moisFiltre) return;
+      m.rendezVous.forEach((ev) => {
+        compteur++;
+        if (publicFiltre !== "tous" && !ev.publics.includes(publicFiltre)) return;
+        if (gratuitUniquement && ev.prix !== 0) return;
+        if (calmeUniquement) {
+          const s = sensorielDe(ev.id);
+          if (s.bruit > 2 && !s.salleCalme) return;
+        }
+        liste.push({
+          event: ev,
+          moisId: m.id,
+          moisNom: m.nom,
+          moisIndex: mIdx,
+          ordreGlobal: compteur,
+        });
+      });
+    });
+
+    liste.sort((a, b) =>
+      ordreDate === "asc"
+        ? a.ordreGlobal - b.ordreGlobal
+        : b.ordreGlobal - a.ordreGlobal,
+    );
+
+    return liste;
+  }, [
+    calendrierComplet,
+    moisFiltre,
+    publicFiltre,
+    gratuitUniquement,
+    calmeUniquement,
+    ordreDate,
+  ]);
+
+  // Découpe les tickets en sections en bande (3 tickets par bande visuelle panoramique)
+  const bandesVisuelles = useMemo(() => {
+    const bandes: {
+      id: string;
+      image: string;
+      alt: string;
+      items: typeof evenementsTries;
+    }[] = [];
+
+    for (let i = 0; i < evenementsTries.length; i += 3) {
+      const tranche = evenementsTries.slice(i, i + 3);
+      const premier = tranche[0];
+      const univers =
+        UNIVERS_PAR_ID[premier.event.univers] ?? Object.values(UNIVERS_PAR_ID)[0];
+      bandes.push({
+        id: `bande-${premier.event.id}-${ordreDate}-${i}`,
+        image: univers.image,
+        alt: univers.alt,
+        items: tranche,
+      });
+    }
+    return bandes;
+  }, [evenementsTries, ordreDate]);
+
+  const reinitialiser = () => {
+    onChangeMoisFiltre?.("tous");
+    onChangePublicFiltre?.("tous");
+    if (gratuitUniquement) onToggleGratuit?.();
+    if (calmeUniquement) onToggleCalme?.();
+  };
 
   return (
-    <section id="programme" className="relative scroll-mt-20 overflow-hidden bg-[#050506] py-16 md:py-24" aria-label="Calendrier annuel">
-      <div className="pointer-events-none absolute -right-40 top-20 h-[520px] w-[520px] rounded-full bg-[#ff4e6b]/8 blur-[150px]" />
-      <div className="relative px-[5vw] md:px-[2.6vw]">
-        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <Reveal><p className="text-[11px] font-bold uppercase tracking-[0.3em] text-white/40">Le programme · Saison 2027</p></Reveal>
-            <Reveal delay={60}>
-              <h2 className="mt-3 font-display text-[clamp(2.1rem,5vw,4rem)] font-bold leading-[0.94] tracking-[-0.03em]">
-                12 MOIS.<br className="sm:hidden" /> <span className="text-event-gradient">DES MONDES QUI CIRCULENT.</span>
-              </h2>
-            </Reveal>
-          </div>
-          <Reveal delay={100}>
-            <p className="max-w-md text-sm leading-relaxed text-white/50">
-              Choisissez un profil, puis ouvrez un mois pour entrer dans son programme.
-            </p>
+    <section
+      id="programme"
+      className="relative scroll-mt-20 bg-black px-[5vw] py-20 md:px-10 md:py-28"
+      aria-label="Tous les rendez-vous en tickets"
+    >
+      <div className="mx-auto max-w-7xl">
+        {/* ——— En-tête + Pictos publics & Tri par date synchronisés avec le Hero ——— */}
+        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+          <Reveal>
+            <h2 className="font-display text-[clamp(2.2rem,5vw,4rem)] font-bold leading-[1.02] tracking-[-0.035em] text-white">
+              Les Tickets 2027.{" "}
+              <span className="text-white/40">{evenementsTries.length} rendez-vous.</span>
+            </h2>
+          </Reveal>
+
+          <Reveal delay={80}>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-[#0b0b0e] p-1">
+                {PROFILS.map(({ id, label }) => {
+                  const actif = publicFiltre === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() =>
+                        onChangePublicFiltre?.(actif ? "tous" : id)
+                      }
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                        actif
+                          ? "bg-white text-black shadow"
+                          : "text-white/65 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tri par Date */}
+              <button
+                type="button"
+                onClick={onToggleOrdreDate}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-[#0b0b0e] px-4 text-[12px] font-semibold text-white transition hover:border-white/35"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5 text-white/70" />
+                <span>{ordreDate === "asc" ? "Date ↑" : "Date ↓"}</span>
+              </button>
+
+              {/* Entrée libre */}
+              <button
+                type="button"
+                onClick={onToggleGratuit}
+                className={`inline-flex h-10 items-center rounded-full border px-4 text-[12px] font-semibold transition ${
+                  gratuitUniquement
+                    ? "border-white bg-white text-black"
+                    : "border-white/15 bg-[#0b0b0e] text-white/80 hover:border-white/35 hover:text-white"
+                }`}
+              >
+                Entrée libre
+              </button>
+
+              {/* Calme */}
+              <button
+                type="button"
+                onClick={onToggleCalme}
+                title="Ambiance calme"
+                className={`inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition ${
+                  calmeUniquement
+                    ? "border-white bg-white text-black"
+                    : "border-white/15 bg-[#0b0b0e] text-white/80 hover:border-white/35 hover:text-white"
+                }`}
+              >
+                <Volume2 className="h-3.5 w-3.5" />
+              </button>
+
+              {filtresActifs && (
+                <button
+                  type="button"
+                  onClick={reinitialiser}
+                  title="Réinitialiser les filtres"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white hover:bg-white hover:text-black"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </Reveal>
         </div>
 
-        {/* Une seule rangée de filtre */}
-        <Reveal delay={120}>
-          <nav className="sticky top-[68px] z-30 -mx-[5vw] mt-8 border-y border-white/10 bg-black/90 px-[5vw] py-3 backdrop-blur-xl md:top-[76px] md:-mx-[2.6vw] md:px-[2.6vw]" aria-label="Filtrer le calendrier par public">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <button
-                onClick={() => setProfil(null)}
-                aria-pressed={!profil}
-                className={`shrink-0 rounded-full px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.13em] transition-all ${!profil ? "bg-white text-black" : "border border-white/15 text-white/55 hover:border-white/40 hover:text-white"}`}
-              >Tout le monde</button>
-              {PROFILS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setProfil(profil === p.id ? null : p.id)}
-                  aria-pressed={profil === p.id}
-                  className={`shrink-0 rounded-full px-4 py-2.5 text-[10.5px] font-bold uppercase tracking-[0.13em] transition-all ${profil === p.id ? "bg-event-gradient text-white" : "border border-white/15 text-white/55 hover:border-white/40 hover:text-white"}`}
-                >{p.label}</button>
-              ))}
+        {/* ——— SECTIONS EN BANDE : VISUEL PANORAMIQUE EN FOND + 1 TICKET BLANC UNIQUE PAR ÉVÉNEMENT ——— */}
+        <div className="mt-10 space-y-8">
+          {bandesVisuelles.map((bande) => (
+            <div
+              key={bande.id}
+              className="relative overflow-hidden rounded-[34px] border border-white/12 p-5 sm:p-7 md:p-8"
+            >
+              {/* Visuel en bande panoramique en fond d'écran */}
+              <img
+                src={bande.image}
+                alt={bande.alt}
+                loading="lazy"
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+              />
+              <div
+                className="pointer-events-none absolute inset-0 bg-black/45"
+                aria-hidden="true"
+              />
+
+              {/* Grille des tickets blancs 100 % opaques (1 ticket unique par événement) */}
+              <div className="relative z-10 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {bande.items.map(({ event, moisNom }) => (
+                  <TicketBlanc
+                    key={event.id}
+                    event={event}
+                    moisNom={moisNom}
+                    onReserve={onReserve}
+                    compact
+                  />
+                ))}
+              </div>
             </div>
-          </nav>
-        </Reveal>
-
-        {/* Grille calendrier — cases carrées, programme à l'intérieur, clic = page du mois */}
-        <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-4">
-          {moisFiltres.map((mois, index) => (
-            <Reveal key={mois.id} delay={(index % 4) * 45} scale>
-              <button
-                onClick={() => onOpenMonth(mois.id)}
-                aria-label={`Ouvrir le programme de ${mois.nom}`}
-                data-cursor="Ouvrir"
-                className="group relative flex aspect-square w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#09090b] p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:border-white/40 hover:bg-[#0e0e11] sm:p-5"
-              >
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span className="font-display text-[10px] font-bold uppercase tracking-[0.25em] text-white/40">{String(index + 1).padStart(2, "0")} / 2027</span>
-                  <span className="h-2 w-2 rounded-full bg-white/20 transition-colors group-hover:bg-event-gradient" />
-                </span>
-                <span className="mt-1 font-display text-[clamp(1.3rem,2.6vw,2.1rem)] font-extrabold leading-none tracking-[-0.035em] transition-colors group-hover:text-white">{mois.nom}</span>
-                <span className="mt-1 line-clamp-1 text-[10px] font-medium text-white/40 sm:text-[11px]">{mois.edition}</span>
-
-                <span className="mt-3 flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
-                  {mois.rendezVousVisibles.length > 0 ? (
-                    mois.rendezVousVisibles.slice(0, 2).map((r) => (
-                      <span key={r.id} className="flex min-w-0 items-start gap-2 border-t border-white/[0.07] pt-1.5">
-                        <span className="shrink-0 pt-px font-display text-[9px] font-bold tabular-nums text-white/40 sm:text-[10px]">{r.heure}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[10px] font-semibold leading-tight text-white/85 sm:text-[11px]">{r.nom}</span>
-                          <span className="mt-0.5 block truncate text-[8px] font-bold uppercase tracking-[0.12em] text-white/35 sm:text-[9px]">{UNIVERS_PAR_ID[r.univers]?.nom}</span>
-                        </span>
-                        <span className={`shrink-0 pt-px text-[8.5px] font-extrabold uppercase tracking-[0.08em] ${r.prix === 0 ? "text-emerald-400" : "text-white/60"}`}>
-                          {r.prix === 0 ? "Gratuit" : `${r.prix} €`}
-                        </span>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="mt-2 text-[10px] leading-relaxed text-white/35">Aucun rendez-vous pour ce profil.</span>
-                  )}
-                  {mois.rendezVousVisibles.length > 2 && (
-                    <span className="mt-auto pt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-white/35">+ {mois.rendezVousVisibles.length - 2} autres</span>
-                  )}
-                </span>
-                <span className="mt-2 flex items-center justify-between border-t border-white/10 pt-2 text-[9px] font-bold uppercase tracking-[0.12em] text-white/35">
-                  <span>{mois.rendezVousVisibles.length} rendez-vous</span>
-                  <span className="flex items-center gap-1 text-white/55 transition-colors group-hover:text-white">
-                    Ouvrir <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </span>
-              </button>
-            </Reveal>
           ))}
         </div>
-
-        <Reveal delay={100}>
-          <div className="mt-8 flex flex-col items-center gap-3 text-center">
-            <button onClick={onAcces} className="group inline-flex items-center gap-2.5 rounded-full bg-white px-8 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-black transition hover:bg-event-gradient hover:text-white">
-              Voir les accès <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </button>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">Les tarifs sont réunis sur la page Accès</p>
-          </div>
-        </Reveal>
       </div>
     </section>
   );
