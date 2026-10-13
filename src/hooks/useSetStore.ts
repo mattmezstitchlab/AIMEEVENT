@@ -14,13 +14,20 @@ export function createSetStore(key: string) {
     abonnes.forEach((fn) => fn());
   };
   const subscribe = (fn: () => void) => { abonnes.add(fn); return () => abonnes.delete(fn); };
+  const has = (id: string) => etat.includes(id);
+  const toggle = (id: string) => ecrire(etat.includes(id) ? etat.filter((x) => x !== id) : [...etat, id]);
+  const add = (id: string) => { if (!etat.includes(id)) ecrire([...etat, id]); };
   return {
+    has,
+    toggle,
+    add,
     useStore() {
       const ids = useSyncExternalStore(subscribe, () => etat, () => [] as string[]);
       return {
         ids,
         has: (id: string) => ids.includes(id),
-        toggle: (id: string) => ecrire(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]),
+        toggle,
+        add,
       };
     },
   };
