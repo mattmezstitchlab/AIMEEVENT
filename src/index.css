@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Inter Tight", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --color-void: #000000;
+  --color-carbon: #060606;
+  --color-smoke: #0b0b0c;
+  --color-line: rgba(255, 255, 255, 0.10);
+  --color-fog: #a1a1aa;
+  --color-ember: #ff9c2f;
+  --color-coral: #ff4e6b;
+  --color-magenta: #e9448c;
+  --color-grape: #c05cd4;
+  --animate-marquee: marquee 28s linear infinite;
+  --animate-marquee-slow: marquee 48s linear infinite;
+  --animate-marquee-reverse: marqueeReverse 40s linear infinite;
+  --animate-pulse-dot: pulseDot 1.8s ease-in-out infinite;
+  --animate-spin-slow: spin 14s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marqueeReverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+@keyframes heroUp {
+  from { opacity: 0; transform: translateY(70px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroPhotoEnter {
+  from { opacity: 1; transform: scale(1.035); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes heroCopyEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hero-slide-image {
+  animation: heroPhotoEnter 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-slide-copy {
+  animation: heroCopyEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: #000;
+}
+body {
+  background: #000;
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+::selection {
+  background: #ff4e6b;
+  color: #fff;
+}
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 8px; border: 2px solid #000; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+/* ——— Signature gradient ——— */
+@utility text-event-gradient {
+  background: linear-gradient(91deg, #ff9c2e 0%, #ff7c35 14%, #ff5f45 27%, #ff4c5e 40%, #f6497a 54%, #dd4595 68%, #c257c8 84%, #b86bd7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+@utility bg-event-gradient {
+  background: linear-gradient(91deg, #ff9c2e 0%, #ff5f45 30%, #f6497a 55%, #c257c8 85%, #b86bd7 100%);
+}
+.border-event-gradient {
+  border: 1px solid transparent;
+  background: linear-gradient(#0b0b0c, #0b0b0c) padding-box,
+    linear-gradient(135deg, #ff9c2e, #ff4e6b 40%, #c05cd4) border-box;
+}
+
+/* ——— Hero display type ——— */
+.hero-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.835;
+  text-transform: uppercase;
+  font-stretch: normal;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+/* ——— Grain ——— */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* ——— Scroll reveal ——— */
+.reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.96) translateY(24px);
+  transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1), transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-scale.is-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.hero-line {
+  opacity: 0;
+  animation: heroUp 1.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.hero-line-1 { animation-delay: 0.15s; }
+.hero-line-2 { animation-delay: 0.32s; }
+.hero-fade {
+  opacity: 0;
+  animation: fadeIn 1.2s ease forwards;
+}
+.hero-fade-1 { animation-delay: 0.7s; }
+.hero-fade-2 { animation-delay: 0.9s; }
+.hero-fade-3 { animation-delay: 1.05s; }
+
+/* ——— Marquee ——— */
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 6%, black 94%, transparent);
+}
+
+/* ——— Card shine ——— */
+.card-shine { position: relative; overflow: hidden; }
+.card-shine::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.14) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform 0.9s ease;
+  pointer-events: none;
+}
+.card-shine:hover::before { transform: translateX(120%); }
+
+/* ——— Outline text ——— */
+.text-stroke {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.28);
+  color: transparent;
+}
+
+/* ——— Ticket glow ——— */
+.ticket-featured {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 24px 80px -20px rgba(255, 78, 107, 0.35), 0 12px 48px -12px rgba(192, 92, 212, 0.3);
+}
+
+/* ——— Curseur personnalisé ——— */
+.custom-cursor-active, .custom-cursor-active * {
+  cursor: none !important;
+}
+
+/* ——— Barre de progression de lecture ——— */
+.scroll-progress-bar {
+  transform-origin: left;
+  will-change: transform;
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-scale, .hero-line, .hero-fade, .hero-slide-image, .hero-slide-copy { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}
